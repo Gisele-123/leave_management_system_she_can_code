@@ -11,9 +11,10 @@ Fully Dockerized and Apple Silicon compatible. Includes sample .env files and sw
 Prerequisites: Docker Desktop 4+, Git
 
 1. Clone the repo
-2. From the repo root, run:
+2. Set env (optional): Edit `.env` at repo root to set `JWT_SECRET` and `GOOGLE_CLIENT_ID`.
+3. From the repo root, run:
    - Windows PowerShell: `docker compose up --build`
-3. Open the apps:
+4. Open the apps:
    - Frontend: http://localhost:5173
    - Auth Swagger: http://localhost:8081/swagger-ui.html
    - Leave Swagger: http://localhost:8082/swagger-ui.html
@@ -37,10 +38,13 @@ Leave:
 - GET /api/leaves/currently-on-leave
 
 ## Environment Files
-- auth-service/.env.sample
-- leave-service/.env.sample
-- frontend/.env.sample
-Copy to `.env` if you want to override defaults.
+The repo includes both sample and ready-to-use .env files:
+- Root: .env (used by docker-compose for JWT_SECRET, GOOGLE_CLIENT_ID)
+- auth-service/.env and auth-service/.env.sample
+- leave-service/.env and leave-service/.env.sample
+- frontend/.env and frontend/.env.sample
+
+You can edit these to match your environment (e.g., set GOOGLE_CLIENT_ID).
 
 ## Development (without Docker)
 - Java 21, Maven 3.9+
@@ -75,20 +79,48 @@ This MVP demonstrates the architecture and core flows. For production readiness:
 - Accrual jobs (Quartz), carryover rules, admin adjustments, reports
 - CI/CD: Build multi-arch images and push to Docker Hub
 
-## Building and Pushing Docker Images
-From repo root:
-- Build: `docker compose build`
-- Tag and push (example):
-  - `docker tag lms-auth yourhub/auth-service:0.0.1`
-  - `docker push yourhub/auth-service:0.0.1`
-  - `docker tag lms-leave yourhub/leave-service:0.0.1`
-  - `docker push yourhub/leave-service:0.0.1`
-  - `docker tag lms-frontend yourhub/lms-frontend:0.0.1`
-  - `docker push yourhub/lms-frontend:0.0.1`
+## Building and Pushing Docker Images (Apple Silicon compatible)
+We recommend using docker buildx to build multi-arch images (linux/amd64, linux/arm64).
+
+1. Create and use a builder (once):
+   - `docker buildx create --name multi --use`  (or `docker buildx use default` if already present)
+2. Log in to Docker Hub:
+   - `docker login`
+3. Build and push each service (replace YOUR_HUB with your Docker Hub username/organization):
+   - Auth:
+     - `docker buildx build --platform linux/amd64,linux/arm64 -t YOUR_HUB/leave-auth-service:0.0.1 -t YOUR_HUB/leave-auth-service:latest -f auth-service/Dockerfile auth-service --push`
+   - Leave:
+     - `docker buildx build --platform linux/amd64,linux/arm64 -t YOUR_HUB/leave-leave-service:0.0.1 -t YOUR_HUB/leave-leave-service:latest -f leave-service/Dockerfile leave-service --push`
+   - Frontend:
+     - `docker buildx build --platform linux/amd64,linux/arm64 -t YOUR_HUB/leave-frontend:0.0.1 -t YOUR_HUB/leave-frontend:latest -f frontend/Dockerfile frontend --push`
+
+Alternatively, for local testing only: `docker compose build` builds for your current platform.
 
 ## Swagger
 - Auth: http://localhost:8081/swagger-ui.html
 - Leave: http://localhost:8082/swagger-ui.html
+
+## Submission Checklist
+- [ ] Push this repository to GitHub/GitLab (monorepo with auth-service, leave-service, frontend)
+- [ ] Build and push multi-arch Docker images to Docker Hub (see section above)
+- [ ] Include `.env` files for all services (root, auth-service, leave-service, frontend)
+- [ ] Ensure the app runs with a single command: `docker compose up --build`
+- [ ] Verify Apple Silicon compatibility by building with buildx or testing on an M1/M2 machine
+- [ ] Verify Swagger UIs respond on 8081 and 8082
+
+## Quick API Smoke Tests (PowerShell)
+# Register or login
+# Register
+# Invoke-WebRequest -Method Post -Uri http://localhost:8081/api/auth/register -Body (@{username='alice';password='pass123';email='alice@example.com'} | ConvertTo-Json) -ContentType 'application/json'
+# Login
+# Invoke-WebRequest -Method Post -Uri http://localhost:8081/api/auth/login -Body (@{username='alice';password='pass123'} | ConvertTo-Json) -ContentType 'application/json'
+
+# Balance
+# Invoke-WebRequest http://localhost:8082/api/leaves/balance/alice
+
+# Apply leave
+# $body = @{username='alice';type='PTO';startDate='2025-08-20';endDate='2025-08-21';reason='vacation'} | ConvertTo-Json
+# Invoke-WebRequest -Method Post -Uri http://localhost:8082/api/leaves/apply -Body $body -ContentType 'application/json'
 
 ## Troubleshooting Docker on Windows
 If `docker compose up --build` fails with a 500 Internal Server Error on a named pipe URL like `http://%2F%2F.%2Fpipe%2FdockerDesktopLinuxEngine/...`:
