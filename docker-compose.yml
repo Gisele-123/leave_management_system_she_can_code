@@ -1,0 +1,41 @@
+services:
+  auth-service:
+    image: lms-auth-service:latest
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: lms-auth
+    environment:
+      - SERVER_PORT=8081
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-key-dev-secret-key-32-characters}
+      - JWT_EXPIRATION_MS=3600000
+    ports:
+      - "8081:8081"
+
+  leave-service:
+    image: lms-leave-service:latest
+    build:
+      context: ./leave-service
+      dockerfile: Dockerfile
+    container_name: lms-leave
+    environment:
+      - SERVER_PORT=8082
+    ports:
+      - "8082:8082"
+    depends_on:
+      - auth-service
+
+  frontend:
+    image: lms-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: lms-frontend
+    environment:
+      - VITE_AUTH_URL=http://localhost:8081
+      - VITE_LEAVE_URL=http://localhost:8082
+    ports:
+      - "5173:80"
+    depends_on:
+      - auth-service
+      - leave-service
