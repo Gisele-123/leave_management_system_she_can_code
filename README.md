@@ -21,6 +21,20 @@ Prerequisites: Docker Desktop 4+, Git
 
 To stop: `docker compose down`
 
+## Quick Setup Script (Windows)
+If you prefer a single command to do everything (env checks, build, run, open browser), use the provided PowerShell script:
+
+- Run: `./setup.ps1`
+- Options:
+  - `-Recreate`   Recreate containers (passes `--force-recreate` to compose)
+  - `-NoDetach`   Run in foreground (omits `-d`)
+  - `-NoOpen`     Do not auto-open browser tabs
+
+Examples:
+- `./setup.ps1` (recommended)
+- `./setup.ps1 -Recreate`
+- `./setup.ps1 -NoOpen`
+
 ## URLs
 - Auth service base: http://localhost:8081
 - Leave service base: http://localhost:8082
