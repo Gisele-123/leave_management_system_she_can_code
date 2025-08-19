@@ -96,6 +96,10 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>3.5.4</version>
+                <configuration>
+                    <mainClass>com.lms.authservice.AuthServiceApplication</mainClass>
+                </configuration>
             </plugin>
         </plugins>
     </build>
