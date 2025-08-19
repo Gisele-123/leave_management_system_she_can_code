@@ -8,6 +8,6 @@ RUN mvn -q -DskipTests package
 
 FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jre AS runtime
 WORKDIR /app
-COPY --from=build /target/leave-service-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=build /leave-service/target/leave-service-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8082
 ENTRYPOINT ["java","-jar","/app/app.jar"]
