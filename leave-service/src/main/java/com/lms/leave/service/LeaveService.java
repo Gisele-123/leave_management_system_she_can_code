@@ -30,7 +30,6 @@ public class LeaveService {
     public LeaveApplication apply(ApplyLeaveRequest req) {
         long days = ChronoUnit.DAYS.between(req.getStartDate(), req.getEndDate()) + 1;
         if (days <= 0) throw new IllegalArgumentException("Invalid date range");
-        // For MVP, we only deduct from PTO
         double bal = balances.getOrDefault(req.getUsername(), 20.0);
         if (bal < days) throw new IllegalArgumentException("Insufficient balance");
         var app = new LeaveApplication();
@@ -51,6 +50,9 @@ public class LeaveService {
         if ("APPROVED".equalsIgnoreCase(status)) {
             long days = ChronoUnit.DAYS.between(app.getStartDate(), app.getEndDate()) + 1;
             balances.put(app.getUsername(), Math.max(0, balances.getOrDefault(app.getUsername(), 20.0) - days));
+            notifyUser(app.getUsername(), "Leave Approved", "Your leave (" + app.getId() + ") has been approved.");
+        } else if ("REJECTED".equalsIgnoreCase(status)) {
+            notifyUser(app.getUsername(), "Leave Rejected", "Your leave (" + app.getId() + ") has been rejected.");
         }
         return app;
     }
@@ -61,5 +63,34 @@ public class LeaveService {
                 .filter(a -> "APPROVED".equalsIgnoreCase(a.getStatus()))
                 .filter(a -> !today.isBefore(a.getStartDate()) && !today.isAfter(a.getEndDate()))
                 .collect(Collectors.toList());
+    }
+
+    // CRUD helpers
+    public List<LeaveApplication> listAll() { return applications.values().stream().toList(); }
+    public List<LeaveApplication> listByUser(String username) {
+        return applications.values().stream().filter(a -> a.getUsername().equalsIgnoreCase(username)).toList();
+    }
+    public LeaveApplication getById(String id) {
+        var app = applications.get(id);
+        if (app == null) throw new NoSuchElementException("Application not found");
+        return app;
+    }
+    public LeaveApplication updateDates(String id, LocalDate start, LocalDate end, String reason) {
+        var app = getById(id);
+        if (!"PENDING".equalsIgnoreCase(app.getStatus())) throw new IllegalStateException("Only pending applications can be updated");
+        app.setStartDate(start);
+        app.setEndDate(end);
+        app.setReason(reason);
+        return app;
+    }
+    public void delete(String id) {
+        var app = getById(id);
+        if (!"PENDING".equalsIgnoreCase(app.getStatus())) throw new IllegalStateException("Only pending applications can be deleted");
+        applications.remove(id);
+    }
+
+    private void notifyUser(String username, String subject, String body) {
+        // For MVP: log-only email; in production, wire JavaMailSender and SMTP.
+        System.out.println("[EMAIL_SIMULATION] to=" + username + "@example.com | subject=" + subject + " | body=" + body);
     }
 }

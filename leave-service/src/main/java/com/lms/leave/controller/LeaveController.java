@@ -5,9 +5,9 @@ import com.lms.leave.dto.LeaveApplication;
 import com.lms.leave.dto.LeaveBalanceResponse;
 import com.lms.leave.service.LeaveService;
 import jakarta.validation.Valid;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -38,4 +38,22 @@ public class LeaveController {
     public List<LeaveApplication> currentlyOnLeave() {
         return leaveService.currentlyOnLeave();
     }
+
+    // CRUD endpoints
+    @GetMapping
+    public List<LeaveApplication> listAll() { return leaveService.listAll(); }
+
+    @GetMapping("/user/{username}")
+    public List<LeaveApplication> listByUser(@PathVariable String username) { return leaveService.listByUser(username); }
+
+    @GetMapping("/{id}")
+    public LeaveApplication getById(@PathVariable String id) { return leaveService.getById(id); }
+
+    @PutMapping("/{id}")
+    public LeaveApplication update(@PathVariable String id, @RequestParam LocalDate startDate, @RequestParam LocalDate endDate, @RequestParam(required = false) String reason) {
+        return leaveService.updateDates(id, startDate, endDate, reason);
+    }
+
+    @DeleteMapping("/{id}")
+    public void delete(@PathVariable String id) { leaveService.delete(id); }
 }

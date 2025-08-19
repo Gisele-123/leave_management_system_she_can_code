@@ -1,9 +1,9 @@
 # SheCanCode Leave Management System (Monorepo)
 
-This repository contains three independent services communicating via REST:
-- auth-service (Spring Boot): User registration and JWT-based login, 2FA stub, Swagger
-- leave-service (Spring Boot): Leave balance, apply, approve, who’s on leave, Swagger
-- frontend (React + Vite): Responsive, vibrant UI consuming both APIs
+Three independent services communicating via REST:
+- auth-service (Spring Boot): User registration, JWT login, Google OAuth login, 2FA stub, Swagger
+- leave-service (Spring Boot): Leave balance, apply, approve/reject with email notification logs, full CRUD, Swagger
+- frontend (React + Vite): Blue & white responsive UI with Login, Register, Google Sign-In, and role‑based dashboards (Staff, Manager, Admin)
 
 Fully Dockerized and Apple Silicon compatible. Includes sample .env files and swagger for backend testing.
 

@@ -16,8 +16,8 @@ public class InMemoryUserService {
 
     public InMemoryUserService(PasswordEncoder passwordEncoder) {
         this.passwordEncoder = passwordEncoder;
-        // Seed an admin
-        var admin = new AppUser("admin", passwordEncoder.encode("admin123"), "admin@example.com", "ADMIN");
+        // Seed the requested admin account
+        var admin = new AppUser("admin@iro.rw", passwordEncoder.encode("admin123"), "admin@iro.rw", "ADMIN");
         users.put(admin.getUsername(), admin);
     }
 
@@ -34,6 +34,16 @@ public class InMemoryUserService {
         var user = users.get(req.getUsername());
         if (user == null || !passwordEncoder.matches(req.getPassword(), user.getPasswordHash())) {
             throw new IllegalArgumentException("Invalid credentials");
+        }
+        return user;
+    }
+
+    public AppUser findOrCreateGoogleUser(String email, String name) {
+        String username = email != null ? email : name;
+        AppUser user = users.get(username);
+        if (user == null) {
+            user = new AppUser(username, passwordEncoder.encode("oauth2"), email, "STAFF");
+            users.put(username, user);
         }
         return user;
     }
