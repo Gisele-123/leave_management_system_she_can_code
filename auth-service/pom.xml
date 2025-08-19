@@ -98,7 +98,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>3.5.4</version>
                 <configuration>
-                    <mainClass>com.lms.authservice.AuthServiceApplication</mainClass>
+                    <mainClass>com.lms.auth.AuthServiceApplication</mainClass>
                 </configuration>
             </plugin>
         </plugins>
