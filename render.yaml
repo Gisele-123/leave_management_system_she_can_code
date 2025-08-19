@@ -1,0 +1,49 @@
+# Render Blueprint to deploy LMS services
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: lms-auth-service
+    env: docker
+    autoDeploy: true
+    rootDir: auth-service
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SERVER_PORT
+        value: 8081
+      - key: JWT_SECRET
+        # Provide a secure value in Render Dashboard or via a secret reference
+        value: dev-secret-key-dev-secret-key-32-characters
+      - key: JWT_EXPIRATION_MS
+        value: 3600000
+      - key: GOOGLE_CLIENT_ID
+        value: ""
+
+  - type: web
+    name: lms-leave-service
+    env: docker
+    autoDeploy: true
+    rootDir: leave-service
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SERVER_PORT
+        value: 8082
+
+  - type: web
+    name: lms-frontend
+    env: docker
+    autoDeploy: true
+    rootDir: frontend
+    plan: free
+    healthCheckPath: /
+    envVars:
+      # Vite reads these at build time. Render will expose env vars during Docker build and runtime.
+      - key: VITE_AUTH_URL
+        # Update these after the backends are deployed, e.g., https://lms-auth-service.onrender.com
+        value: ""
+      - key: VITE_LEAVE_URL
+        value: ""
+      - key: VITE_GOOGLE_CLIENT_ID
+        value: ""

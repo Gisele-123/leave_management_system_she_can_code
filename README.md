@@ -149,3 +149,32 @@ If problems persist, please share the full output of `docker version`, `docker i
 
 ## Notes on Existing Root Project
 The original Spring Boot skeleton remains at root; this monorepo adds three stand-alone services per requirement. Prefer using docker-compose to run them together.
+
+
+## Deploying to Render (Blueprint)
+You can deploy all three services to Render using the render.yaml we added.
+
+Steps:
+1. Push this repository to GitHub or GitLab.
+2. In Render, click New > Blueprint and connect your repo.
+3. Render will detect render.yaml and show three Web Services:
+   - lms-auth-service (Docker) – health check: /actuator/health
+   - lms-leave-service (Docker) – health check: /actuator/health
+   - lms-frontend (Docker) – health check: /
+4. For the first deploy, set environment variables in each service:
+   - Auth service:
+     - JWT_SECRET: set a strong secret (min 32 chars).
+     - JWT_EXPIRATION_MS: e.g., 3600000.
+     - GOOGLE_CLIENT_ID: your Google OAuth client ID (optional if not using Google login).
+   - Leave service: no required vars by default.
+   - Frontend:
+     - VITE_AUTH_URL: e.g., https://lms-auth-service.onrender.com
+     - VITE_LEAVE_URL: e.g., https://lms-leave-service.onrender.com
+     - VITE_GOOGLE_CLIENT_ID: same as above if using Google login.
+5. Click Apply. Render will build Docker images and deploy the services.
+6. After the backends are live, update the frontend’s VITE_* URLs if needed and redeploy the frontend (rebuild required to bake in Vite env vars).
+
+Notes:
+- The backend Dockerfiles expose ports 8081 and 8082, and the frontend exposes 80. Render handles routing; no manual port mapping is needed.
+- Spring Boot Actuator is already included; health checks at /actuator/health are available by default.
+- Vite environment variables are read at build time; ensure the frontend service has the correct VITE_* values when it builds on Render.
