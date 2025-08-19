@@ -1,18 +1,23 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
-import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom'
 import { decodeJwt } from './auth'
 
-function Layout({children, token, onLogout}){
+function Layout({children, token, user, onLogout}){
   return (
     <>
       <header>
         <div className="nav">
           <div className="logo"><span className="dot"/><h1>SheCanCode LMS</h1></div>
           <nav>
-            <Link className="link" to="/login">Login</Link>{' '}
-            <Link className="link" to="/register" style={{marginLeft:12}}>Register</Link>
-            {token && <button style={{marginLeft:12}} onClick={onLogout}>Logout</button>}
+            {!token && <>
+              <Link className="link" to="/login">Login</Link>
+              <Link className="link" to="/register" style={{marginLeft:12}}>Register</Link>
+            </>}
+            {token && <>
+              <span style={{marginRight:12, color:'var(--muted)'}}>{user?.username} ({user?.role})</span>
+              <button onClick={onLogout}>Logout</button>
+            </>}
           </nav>
         </div>
       </header>
@@ -24,18 +29,22 @@ function Layout({children, token, onLogout}){
 function Login({setAuth}){
   const [form, setForm] = useState({ username: '', password: '' })
   const [message, setMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
   const AUTH_URL = useMemo(()=>import.meta.env.VITE_AUTH_URL || 'http://localhost:8081',[])
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
   const nav = useNavigate()
 
   const doLogin = async ()=>{
+    setIsLoading(true); setMessage('')
     try{
       const res = await axios.post(`${AUTH_URL}/api/auth/login`, form)
       const token = res.data.token
       const claims = decodeJwt(token)
       setAuth({token, user: {username: claims?.sub, role: claims?.role || 'STAFF'}})
+      setMessage('Successfully logged in')
       nav('/dashboard')
     }catch(e){ setMessage('Invalid credentials') }
+    finally{ setIsLoading(false) }
   }
 
   useEffect(()=>{
@@ -71,12 +80,18 @@ function Login({setAuth}){
       <div>
         <div className="hero"><h2>Login</h2><p>Use your account or sign in with Google</p></div>
         <div className="card">
-          <div className="grid">
+          <div className="form-vertical">
             <input placeholder="Email or username" value={form.username} onChange={e=>setForm({...form, username: e.target.value})} />
             <input placeholder="Password" type="password" value={form.password} onChange={e=>setForm({...form, password: e.target.value})} />
-            <button onClick={doLogin}>Login</button>
+            <button onClick={doLogin}>{isLoading ? 'Logging in…' : 'Login'}</button>
           </div>
+          <div className="or"><span>or</span></div>
+          <button className="google-btn" onClick={()=>window.google?.accounts?.id?.prompt?.()}>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="20" height="20"><path fill="#FFC107" d="M43.61 20.08H42V20H24v8h11.32c-1.64 4.66-6.08 8-11.32 8-6.63 0-12-5.37-12-12s5.37-12 12-12c3.06 0 5.84 1.16 7.94 3.06l5.66-5.66C33.14 6.18 28.8 4 24 4 12.95 4 4 12.95 4 24s8.95 20 20 20 20-8.95 20-20c0-1.34-.14-2.65-.39-3.92z"/><path fill="#FF3D00" d="M6.31 14.69l6.58 4.82C14.35 16.46 18.83 14 24 14c3.06 0 5.84 1.16 7.94 3.06l5.66-5.66C33.14 6.18 28.8 4 24 4 16.28 4 9.66 8.22 6.31 14.69z"/><path fill="#4CAF50" d="M24 44c5.12 0 9.79-1.96 13.31-5.16l-6.14-5.2C29.13 35.78 26.7 36.6 24 36.6c-5.21 0-9.62-3.28-11.28-7.88l-6.52 5.02C9.49 39.44 16.16 44 24 44z"/><path fill="#1976D2" d="M43.61 20.08H42V20H24v8h11.32c-.78 2.21-2.22 4.15-4.02 5.55.01-.01 6.14 5.2 6.14 5.2C39.62 36.65 44 30.95 44 24c0-1.34-.14-2.65-.39-3.92z"/></svg>
+            Continue with Google
+          </button>
           <div id="gbtn" style={{marginTop:16}}></div>
+          <p style={{marginTop:12}}>New here? <Link className="link" to="/register">Create an account</Link></p>
           {message && <div className="info" style={{marginTop:12}}>{message}</div>}
         </div>
       </div>
@@ -88,12 +103,42 @@ function Register({setAuth}){
   const [form, setForm] = useState({ username: '', password: '', email: '', role: 'STAFF' })
   const AUTH_URL = useMemo(()=>import.meta.env.VITE_AUTH_URL || 'http://localhost:8081',[])
   const nav = useNavigate()
+  const [isLoading, setIsLoading] = useState(false)
+  const [message, setMessage] = useState('')
+  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
+  useEffect(()=>{
+    const ensure = ()=>{
+      if (window.google && GOOGLE_CLIENT_ID){
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: async (resp)=>{
+            try{
+              const r = await axios.post(`${AUTH_URL}/api/auth/google`, { idToken: resp.credential })
+              // on registration via Google we directly log in
+              const token = r.data.token
+              const claims = decodeJwt(token)
+              setAuth({token, user:{username: claims?.sub, role: claims?.role || 'STAFF'}})
+              nav('/dashboard')
+            }catch(e){ /* ignore */ }
+          }
+        })
+        const el = document.getElementById('gbtn-register')
+        if (el){ window.google.accounts.id.renderButton(el, { theme:'outline', size:'large', width: 300 }) }
+      }
+    }
+    if (!window.google){
+      const s = document.createElement('script'); s.src='https://accounts.google.com/gsi/client'; s.async=true; s.onload=ensure; document.body.appendChild(s)
+      return ()=>{ document.body.removeChild(s) }
+    } else { ensure() }
+  },[])
   const doRegister = async ()=>{
-    const res = await axios.post(`${AUTH_URL}/api/auth/register`, form)
-    const token = res.data.token
-    const claims = decodeJwt(token)
-    setAuth({token, user: {username: claims?.sub, role: form.role}})
-    nav('/dashboard')
+    setIsLoading(true); setMessage('')
+    try{
+      await axios.post(`${AUTH_URL}/api/auth/register`, form)
+      setMessage('Account created. Please login to continue.')
+      nav('/login')
+    }catch(e){ setMessage('Registration failed') }
+    finally{ setIsLoading(false) }
   }
   return (
     <div className="layout">
@@ -104,7 +149,7 @@ function Register({setAuth}){
       <div>
         <div className="hero"><h2>Register</h2><p>Choose your role</p></div>
         <div className="card">
-          <div className="grid">
+          <div className="form-vertical">
             <input placeholder="Username" value={form.username} onChange={e=>setForm({...form, username: e.target.value})} />
             <input placeholder="Email" value={form.email} onChange={e=>setForm({...form, email: e.target.value})} />
             <input placeholder="Password" type="password" value={form.password} onChange={e=>setForm({...form, password: e.target.value})} />
@@ -113,8 +158,15 @@ function Register({setAuth}){
               <option>MANAGER</option>
               <option>ADMIN</option>
             </select>
-            <button onClick={doRegister}>Create account</button>
+            <button onClick={doRegister}>{isLoading ? 'Creating account…' : 'Create account'}</button>
           </div>
+          <div className="or"><span>or</span></div>
+          <button className="google-btn" onClick={()=>window.google?.accounts?.id?.prompt?.()}>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="20" height="20"><path fill="#FFC107" d="M43.61 20.08H42V20H24v8h11.32c-1.64 4.66-6.08 8-11.32 8-6.63 0-12-5.37-12-12s5.37-12 12-12c3.06 0 5.84 1.16 7.94 3.06l5.66-5.66C33.14 6.18 28.8 4 24 4 16.28 4 9.66 8.22 6.31 14.69z"/><path fill="#FF3D00" d="M6.31 14.69l6.58 4.82C14.35 16.46 18.83 14 24 14c3.06 0 5.84 1.16 7.94 3.06l5.66-5.66C33.14 6.18 28.8 4 24 4 16.28 4 9.66 8.22 6.31 14.69z"/><path fill="#4CAF50" d="M24 44c5.12 0 9.79-1.96 13.31-5.16l-6.14-5.2C29.13 35.78 26.7 36.6 24 36.6c-5.21 0-9.62-3.28-11.28-7.88l-6.52 5.02C9.49 39.44 16.16 44 24 44z"/><path fill="#1976D2" d="M43.61 20.08H42V20H24v8h11.32c-.78 2.21-2.22 4.15-4.02 5.55.01-.01 6.14 5.2 6.14 5.2C39.62 36.65 44 30.95 44 24c0-1.34-.14-2.65-.39-3.92z"/></svg>
+            Continue with Google
+          </button>
+          <div id="gbtn-register" style={{marginTop:16}}></div>
+          <p style={{marginTop:12}}>Already have an account? <Link className="link" to="/login">Login</Link></p>
         </div>
       </div>
     </div>
@@ -230,8 +282,8 @@ export default function App(){
           } />
         </Routes>
         <div className="footer">
-          <a href={`${AUTH_URL}/swagger-ui.html`} target="_blank">Auth Swagger</a>
-          <a href={`${LEAVE_URL}/swagger-ui.html`} target="_blank">Leave Swagger</a>
+          <a href={`${AUTH_URL}/swagger-ui/index.html`} target="_blank">Auth Swagger</a>
+          <a href={`${LEAVE_URL}/swagger-ui/index.html`} target="_blank">Leave Swagger</a>
         </div>
       </Layout>
     </BrowserRouter>
