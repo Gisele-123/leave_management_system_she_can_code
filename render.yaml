@@ -7,65 +7,43 @@ services:
     env: docker
     autoDeploy: true
     rootDir: auth-service
-    dockerfilePath: Dockerfile
     plan: free
     healthCheckPath: /actuator/health
     envVars:
       - key: SERVER_PORT
         value: 8081
       - key: JWT_SECRET
-        value: {{JWT_SECRET}}
+        # Provide a secure value in Render Dashboard or via a secret reference
+        value: dev-secret-key-dev-secret-key-32-characters
       - key: JWT_EXPIRATION_MS
         value: 3600000
       - key: GOOGLE_CLIENT_ID
-        value: {{GOOGLE_CLIENT_ID}}
-      - key: DATABASE_URL
-        value: {{AUTH_DB_URL}}
-      - key: DATABASE_USERNAME
-        value: {{AUTH_DB_USER}}
-      - key: DATABASE_PASSWORD
-        value: {{AUTH_DB_PASS}}
+        value: ""
 
   - type: web
     name: lms-leave-service
     env: docker
     autoDeploy: true
     rootDir: leave-service
-    dockerfilePath: Dockerfile
     plan: free
     healthCheckPath: /actuator/health
     envVars:
       - key: SERVER_PORT
         value: 8082
-      - key: DATABASE_URL
-        value: {{LEAVE_DB_URL}}
-      - key: DATABASE_USERNAME
-        value: {{LEAVE_DB_USER}}
-      - key: DATABASE_PASSWORD
-        value: {{LEAVE_DB_PASS}}
-      - key: AUTH_SERVICE_URL
-        value: https://lms-auth-service.onrender.com
 
   - type: web
     name: lms-frontend
     env: docker
     autoDeploy: true
     rootDir: frontend
-    dockerfilePath: Dockerfile
     plan: free
     healthCheckPath: /
     envVars:
+      # Vite reads these at build time. Render will expose env vars during Docker build and runtime.
       - key: VITE_AUTH_URL
-        value: https://lms-auth-service.onrender.com
+        # Update these after the backends are deployed, e.g., https://lms-auth-service.onrender.com
+        value: ""
       - key: VITE_LEAVE_URL
-        value: https://lms-leave-service.onrender.com
+        value: ""
       - key: VITE_GOOGLE_CLIENT_ID
-        value: {{GOOGLE_CLIENT_ID}}
-
-databases:
-  - name: auth-db
-    plan: free
-    engine: POSTGRESQL
-  - name: leave-db
-    plan: free
-    engine: POSTGRESQL
+        value: ""customise my render.yaml
