@@ -53,6 +53,124 @@ For this repo, we updated frontend/.env to:
 
 On Vercel, set the same values in Project Settings > Environment Variables and redeploy the frontend so Vite rebuilds with these URLs.
 
+## Live Testing Guide (Deployed)
+Follow these steps to validate your live deployment end-to-end using your Vercel frontend and Render backend.
+
+### Default Accounts / Roles (Live & Local)
+- Admin (seeded by backend):
+  - Username/Email: admin@iro.rw
+  - Password: admin123
+  - Role: ADMIN
+- Manager: Not pre-seeded. Please create a MANAGER account via the Register page or API.
+- Staff: Not pre-seeded. Create as needed during testing.
+
+Tip: You can log into the Admin Dashboard immediately using the default admin without registering a new ADMIN user.
+
+URLs
+- Frontend (UI): https://leave-management-system-she-can-cod.vercel.app/
+- Backend (Swagger): https://leave-management-system-she-can-code-1.onrender.com/swagger-ui/index.html
+  - If the above 404s, try: https://leave-management-system-she-can-code-1.onrender.com/swagger-ui.html
+- Health check: https://leave-management-system-she-can-code-1.onrender.com/actuator/health
+
+Prerequisites (one-time)
+- On Vercel: ensure these variables exist and were present at build time (then redeploy Frontend after editing):
+  - VITE_AUTH_URL=https://leave-management-system-she-can-code-1.onrender.com
+  - VITE_LEAVE_URL=https://leave-management-system-she-can-code-1.onrender.com
+  - VITE_GOOGLE_CLIENT_ID=your-google-client-id (optional if testing Google login)
+- On Render (Auth service): ensure env has JWT_SECRET, JWT_EXPIRATION_MS, and (optional) GOOGLE_CLIENT_ID.
+- Confirm backend is healthy via the health check URL (should return {"status":"UP"}).
+
+A. Quick UI Flow (Staff → Manager → Admin)
+1) Open the frontend
+   - Go to https://leave-management-system-she-can-cod.vercel.app/
+2) Register accounts
+   - Click Register and create three users (choose roles in the dropdown):
+     - alice (STAFF), any email, a password you will remember
+     - mary (MANAGER)
+     - adam (ADMIN)
+   - Tip: If you already registered, you can skip and just Log in.
+3) Login as Staff and apply leave
+   - Log in as alice
+   - You’ll land on the Staff Dashboard
+   - Apply for leave with:
+     - Type: PTO (or any)
+     - Start Date: today or a future date
+     - End Date: same as start or a future date
+     - Reason: optional
+   - Verify the new request appears in “My Applications” with status PENDING.
+4) Manager review and decision
+   - Logout, then login as mary (MANAGER)
+   - Go to Manager Dashboard
+   - You should see alice’s request as PENDING
+   - Click Approve (or Reject) and ensure the list updates
+5) Admin overview
+   - Option A: Login with default admin (no registration needed)
+     - Username/Email: admin@iro.rw
+     - Password: admin123
+   - Option B: If you created your own ADMIN during Register, use that account instead
+   - Check the Admin Dashboard cards (Approved, Pending, Rejected) reflect the current counts
+
+B. API Smoke Test (Live Backend)
+Use Swagger UI or PowerShell to verify the backend independently from the UI.
+
+1) Open Swagger
+   - https://leave-management-system-she-can-code-1.onrender.com/swagger-ui/index.html
+   - Find auth and leave endpoints under /api/auth and /api/leaves
+2) Register via API (optional if already registered)
+   - POST /api/auth/register
+   - Body example:
+     {
+       "username": "alice",
+       "password": "pass123",
+       "email": "alice@example.com",
+       "role": "STAFF"
+     }
+3) Login via API and capture token
+   - POST /api/auth/login
+   - Body: {"username":"alice","password":"pass123"}
+   - Response contains token (JWT)
+4) Create leave
+   - POST /api/leaves/apply
+   - Body example:
+     {
+       "username":"alice",
+       "type":"PTO",
+       "startDate":"2025-08-20",
+       "endDate":"2025-08-21",
+       "reason":"vacation"
+     }
+5) Manager decision
+   - POST /api/leaves/approve/{id}?status=APPROVED or REJECTED
+
+PowerShell examples (adjust dates/IDs):
+# Register
+# Invoke-WebRequest -Method Post -Uri https://leave-management-system-she-can-code-1.onrender.com/api/auth/register -Body (@{username='alice';password='pass123';email='alice@example.com';role='STAFF'} | ConvertTo-Json) -ContentType 'application/json'
+# Login
+# $login = Invoke-WebRequest -Method Post -Uri https://leave-management-system-she-can-code-1.onrender.com/api/auth/login -Body (@{username='alice';password='pass123'} | ConvertTo-Json) -ContentType 'application/json'
+# $token = (ConvertFrom-Json $login.Content).token
+# Apply leave
+# $body = @{username='alice';type='PTO';startDate='2025-08-20';endDate='2025-08-21';reason='vacation'} | ConvertTo-Json
+# Invoke-WebRequest -Method Post -Uri https://leave-management-system-she-can-code-1.onrender.com/api/leaves/apply -Body $body -ContentType 'application/json'
+
+C. Optional: Google Sign-In (if configured)
+- In Vercel and Render, set GOOGLE_CLIENT_ID/VITE_GOOGLE_CLIENT_ID to the same valid OAuth Client ID
+- On the Login or Register page, click “Continue with Google” and complete the flow
+
+Troubleshooting (Live)
+- Frontend calls localhost or wrong URL
+  - Cause: Vite env vars weren’t set at build time. Fix values in Vercel Project Settings and Redeploy (not just restart) so the build bakes them in.
+- Backend 404/500 from the UI
+  - Check backend health: https://leave-management-system-she-can-code-1.onrender.com/actuator/health
+  - Open Swagger and try the same endpoint; compare paths the UI calls (see devtools Network tab) vs Swagger paths.
+- CORS issues
+  - Render usually sends permissive CORS for simple endpoints in this MVP. If you see CORS blocked, try in Swagger first; if it works there but not from Vercel, share the failing request details (method, path, response headers) so we can tune CORS.
+- Dates validation
+  - Ensure startDate <= endDate and pick a current or future date for predictable results.
+- JWT or session issues
+  - If actions suddenly fail, log out and log back in to refresh your token.
+
+After completing the above, you’ll have validated: registration, login, staff apply, manager approve/reject, and admin stats on your live deployment.
+
 ## Endpoints (MVP)
 Auth:
 - POST /api/auth/register {username,password,email,role?}
