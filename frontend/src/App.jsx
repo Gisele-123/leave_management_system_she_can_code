@@ -114,7 +114,6 @@ function Register({setAuth}){
           callback: async (resp)=>{
             try{
               const r = await axios.post(`${AUTH_URL}/api/auth/google`, { idToken: resp.credential })
-              // on registration via Google we directly log in
               const token = r.data.token
               const claims = decodeJwt(token)
               setAuth({token, user:{username: claims?.sub, role: claims?.role || 'STAFF'}})
@@ -161,10 +160,10 @@ function Register({setAuth}){
             <button onClick={doRegister}>{isLoading ? 'Creating account…' : 'Create account'}</button>
           </div>
           <div className="or"><span>or</span></div>
-          <button className="google-btn" onClick={()=>window.google?.accounts?.id?.prompt?.()}>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="20" height="20"><path fill="#FFC107" d="M43.61 20.08H42V20H24v8h11.32c-1.64 4.66-6.08 8-11.32 8-6.63 0-12-5.37-12-12s5.37-12 12-12c3.06 0 5.84 1.16 7.94 3.06l5.66-5.66C33.14 6.18 28.8 4 24 4 16.28 4 9.66 8.22 6.31 14.69z"/><path fill="#FF3D00" d="M6.31 14.69l6.58 4.82C14.35 16.46 18.83 14 24 14c3.06 0 5.84 1.16 7.94 3.06l5.66-5.66C33.14 6.18 28.8 4 24 4 16.28 4 9.66 8.22 6.31 14.69z"/><path fill="#4CAF50" d="M24 44c5.12 0 9.79-1.96 13.31-5.16l-6.14-5.2C29.13 35.78 26.7 36.6 24 36.6c-5.21 0-9.62-3.28-11.28-7.88l-6.52 5.02C9.49 39.44 16.16 44 24 44z"/><path fill="#1976D2" d="M43.61 20.08H42V20H24v8h11.32c-.78 2.21-2.22 4.15-4.02 5.55.01-.01 6.14 5.2 6.14 5.2C39.62 36.65 44 30.95 44 24c0-1.34-.14-2.65-.39-3.92z"/></svg>
-            Continue with Google
-          </button>
+{/*           <button className="google-btn" onClick={()=>window.google?.accounts?.id?.prompt?.()}> */}
+{/*             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="20" height="20"><path fill="#FFC107" d="M43.61 20.08H42V20H24v8h11.32c-1.64 4.66-6.08 8-11.32 8-6.63 0-12-5.37-12-12s5.37-12 12-12c3.06 0 5.84 1.16 7.94 3.06l5.66-5.66C33.14 6.18 28.8 4 24 4 16.28 4 9.66 8.22 6.31 14.69z"/><path fill="#FF3D00" d="M6.31 14.69l6.58 4.82C14.35 16.46 18.83 14 24 14c3.06 0 5.84 1.16 7.94 3.06l5.66-5.66C33.14 6.18 28.8 4 24 4 16.28 4 9.66 8.22 6.31 14.69z"/><path fill="#4CAF50" d="M24 44c5.12 0 9.79-1.96 13.31-5.16l-6.14-5.2C29.13 35.78 26.7 36.6 24 36.6c-5.21 0-9.62-3.28-11.28-7.88l-6.52 5.02C9.49 39.44 16.16 44 24 44z"/><path fill="#1976D2" d="M43.61 20.08H42V20H24v8h11.32c-.78 2.21-2.22 4.15-4.02 5.55.01-.01 6.14 5.2 6.14 5.2C39.62 36.65 44 30.95 44 24c0-1.34-.14-2.65-.39-3.92z"/></svg> */}
+{/*             Continue with Google */}
+{/*           </button> */}
           <div id="gbtn-register" style={{marginTop:16}}></div>
           <p style={{marginTop:12}}>Already have an account? <Link className="link" to="/login">Login</Link></p>
         </div>
