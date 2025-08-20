@@ -89,7 +89,7 @@ A. Quick UI Flow (Staff → Manager → Admin)
      - mary (MANAGER)
      - adam (ADMIN)
    - Tip: If you already registered, you can skip and just Log in.
-3) Login as Staff and apply leave
+3) Login as Staff and apply leave (with Submitting UX)
    - Log in as alice
    - You’ll land on the Staff Dashboard
    - Apply for leave with:
@@ -97,18 +97,20 @@ A. Quick UI Flow (Staff → Manager → Admin)
      - Start Date: today or a future date
      - End Date: same as start or a future date
      - Reason: optional
+   - Click Submit and observe the button changes to “Submitting…” and becomes disabled until the request completes.
    - Verify the new request appears in “My Applications” with status PENDING.
-4) Manager review and decision
+   - Click View to see details. While PENDING, you can click Edit to update dates/reason, or Delete to remove it.
+4) Manager review and decision (with View)
    - Logout, then login as mary (MANAGER)
    - Go to Manager Dashboard
-   - You should see alice’s request as PENDING
-   - Click Approve (or Reject) and ensure the list updates
-5) Admin overview
+   - You should see alice’s request as PENDING; use View to inspect, then Approve/Reject.
+5) Admin overview (with full list)
    - Option A: Login with default admin (no registration needed)
      - Username/Email: admin@iro.rw
      - Password: admin123
    - Option B: If you created your own ADMIN during Register, use that account instead
    - Check the Admin Dashboard cards (Approved, Pending, Rejected) reflect the current counts
+   - Scroll down to "All Applications" to view every request and open details using View
 
 B. API Smoke Test (Live Backend)
 Use Swagger UI or PowerShell to verify the backend independently from the UI.

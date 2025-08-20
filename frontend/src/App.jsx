@@ -176,10 +176,40 @@ function Register({setAuth}){
 function StaffDashboard({user, LEAVE_URL}){
   const [list, setList] = useState([])
   const [apply, setApply] = useState({ username: user.username, type:'PTO', startDate:'', endDate:'', reason:'' })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [selected, setSelected] = useState(null) // selected application for view/edit
+  const [edit, setEdit] = useState(null) // edit form state when editing
+  const [err, setErr] = useState('')
+
   const reload = async()=>{ const r = await axios.get(`${LEAVE_URL}/api/leaves/user/${user.username}`); setList(r.data) }
   useEffect(()=>{ reload() },[])
-  const submit = async()=>{ await axios.post(`${LEAVE_URL}/api/leaves/apply`, apply); await reload() }
-  const remove = async(id)=>{ await axios.delete(`${LEAVE_URL}/api/leaves/${id}`); await reload() }
+
+  const submit = async()=>{
+    setErr(''); setIsSubmitting(true)
+    try{
+      await axios.post(`${LEAVE_URL}/api/leaves/apply`, apply)
+      await reload()
+      // auto-select the latest pending (approx: by created order if available; otherwise just clear selection)
+      setSelected(null)
+      setApply({ username: user.username, type:'PTO', startDate:'', endDate:'', reason:'' })
+    }catch(e){ setErr('Failed to submit. Please check dates and balance.') }
+    finally{ setIsSubmitting(false) }
+  }
+
+  const remove = async(id)=>{ await axios.delete(`${LEAVE_URL}/api/leaves/${id}`); await reload(); if(selected?.id===id){ setSelected(null); setEdit(null) } }
+  const startEdit = (it)=>{ setSelected(it); setEdit({ startDate: it.startDate, endDate: it.endDate, reason: it.reason || '' }) }
+  const saveEdit = async()=>{
+    if (!selected) return
+    try{
+      await axios.put(`${LEAVE_URL}/api/leaves/${selected.id}`, null, { params: { startDate: edit.startDate, endDate: edit.endDate, reason: edit.reason } })
+      await reload()
+      setEdit(null)
+      // refresh selected from new list
+      const updated = list.find(x=>x.id===selected.id)
+      setSelected(updated || null)
+    }catch(e){ setErr('Update failed. Only PENDING applications can be updated.') }
+  }
+
   return (
     <>
       <div className="hero"><h2>Staff Dashboard</h2><p>Apply and manage your leave</p></div>
@@ -196,19 +226,45 @@ function StaffDashboard({user, LEAVE_URL}){
           <input type="date" value={apply.startDate} onChange={e=>setApply({...apply, startDate:e.target.value})} />
           <input type="date" value={apply.endDate} onChange={e=>setApply({...apply, endDate:e.target.value})} />
           <input placeholder="Reason (optional)" value={apply.reason} onChange={e=>setApply({...apply, reason:e.target.value})} />
-          <button onClick={submit}>Submit</button>
+          <button onClick={submit} disabled={isSubmitting}>{isSubmitting ? 'Submitting…' : 'Submit'}</button>
         </div>
+        {err && <div className="info" style={{marginTop:8, color:'#dc3545'}}>{err}</div>}
       </div>
       <div className="card">
         <h3>My Applications</h3>
         <ul>
           {list.map(it => (
-            <li key={it.id} style={{display:'flex',justifyContent:'space-between',padding:'.25rem 0'}}>
-              <span>{it.type} • {it.startDate} → {it.endDate} • {it.status}</span>
+            <li key={it.id} style={{display:'flex',gap:8,alignItems:'center',padding:'.25rem 0'}}>
+              <span style={{flex:1}}>{it.type} • {it.startDate} → {it.endDate} • {it.status}</span>
+              <button onClick={()=>setSelected(it)}>View</button>
+              {it.status === 'PENDING' && <button onClick={()=>startEdit(it)}>Edit</button>}
               {it.status === 'PENDING' && <button onClick={()=>remove(it.id)}>Delete</button>}
             </li>
           ))}
         </ul>
+        {selected && !edit && (
+          <div className="card" style={{marginTop:12, background:'#f9fbff'}}>
+            <h4>Application Details</h4>
+            <p><b>ID:</b> {selected.id}</p>
+            <p><b>Type:</b> {selected.type}</p>
+            <p><b>Dates:</b> {selected.startDate} → {selected.endDate}</p>
+            <p><b>Status:</b> {selected.status}</p>
+            {selected.approverComment && <p><b>Manager Comment:</b> {selected.approverComment}</p>}
+            <button onClick={()=>setSelected(null)}>Close</button>
+          </div>
+        )}
+        {edit && selected && (
+          <div className="card" style={{marginTop:12}}>
+            <h4>Edit Application (PENDING)</h4>
+            <div className="grid">
+              <input type="date" value={edit.startDate} onChange={e=>setEdit({...edit, startDate:e.target.value})} />
+              <input type="date" value={edit.endDate} onChange={e=>setEdit({...edit, endDate:e.target.value})} />
+              <input placeholder="Reason (optional)" value={edit.reason} onChange={e=>setEdit({...edit, reason:e.target.value})} />
+              <button onClick={saveEdit}>Save</button>
+              <button onClick={()=>setEdit(null)} style={{background:'#6c757d'}}>Cancel</button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   )
@@ -216,9 +272,10 @@ function StaffDashboard({user, LEAVE_URL}){
 
 function ManagerDashboard({LEAVE_URL}){
   const [pending, setPending] = useState([])
+  const [selected, setSelected] = useState(null)
   const reload = async()=>{ const r = await axios.get(`${LEAVE_URL}/api/leaves`); setPending(r.data.filter(x=>x.status==='PENDING')) }
   useEffect(()=>{ reload() },[])
-  const act = async(id, status)=>{ await axios.post(`${LEAVE_URL}/api/leaves/approve/${id}?status=${status}`); await reload() }
+  const act = async(id, status)=>{ await axios.post(`${LEAVE_URL}/api/leaves/approve/${id}?status=${status}`); await reload(); if(selected?.id===id){ setSelected(null) } }
   return (
     <>
       <div className="hero"><h2>Manager Dashboard</h2><p>Review and approve requests</p></div>
@@ -227,11 +284,24 @@ function ManagerDashboard({LEAVE_URL}){
           {pending.map(it => (
             <li key={it.id} style={{display:'flex',gap:8,alignItems:'center',padding:'.25rem 0'}}>
               <span style={{flex:1}}>{it.username} • {it.type} • {it.startDate} → {it.endDate}</span>
+              <button onClick={()=>setSelected(it)}>View</button>
               <button onClick={()=>act(it.id,'APPROVED')}>Approve</button>
               <button onClick={()=>act(it.id,'REJECTED')}>Reject</button>
             </li>
           ))}
         </ul>
+        {selected && (
+          <div className="card" style={{marginTop:12, background:'#f9fbff'}}>
+            <h4>Application Details</h4>
+            <p><b>ID:</b> {selected.id}</p>
+            <p><b>User:</b> {selected.username}</p>
+            <p><b>Type:</b> {selected.type}</p>
+            <p><b>Dates:</b> {selected.startDate} → {selected.endDate}</p>
+            <p><b>Status:</b> {selected.status}</p>
+            {selected.reason && <p><b>Reason:</b> {selected.reason}</p>}
+            <button onClick={()=>setSelected(null)}>Close</button>
+          </div>
+        )}
       </div>
     </>
   )
@@ -239,9 +309,12 @@ function ManagerDashboard({LEAVE_URL}){
 
 function AdminDashboard({LEAVE_URL}){
   const [stats, setStats] = useState({approved:0, pending:0, rejected:0})
+  const [all, setAll] = useState([])
+  const [selected, setSelected] = useState(null)
   useEffect(()=>{
     const load = async()=>{
       const r = await axios.get(`${LEAVE_URL}/api/leaves`)
+      setAll(r.data)
       const approved = r.data.filter(x=>x.status==='APPROVED').length
       const pending = r.data.filter(x=>x.status==='PENDING').length
       const rejected = r.data.filter(x=>x.status==='REJECTED').length
@@ -255,6 +328,30 @@ function AdminDashboard({LEAVE_URL}){
         <div className="card"><h3>Approved</h3><p style={{fontSize:28,fontWeight:800,color:'var(--primary)'}}>{stats.approved}</p></div>
         <div className="card"><h3>Pending</h3><p style={{fontSize:28,fontWeight:800,color:'#ff8800'}}>{stats.pending}</p></div>
         <div className="card"><h3>Rejected</h3><p style={{fontSize:28,fontWeight:800,color:'#dc3545'}}>{stats.rejected}</p></div>
+      </div>
+      <div className="card" style={{marginTop:12}}>
+        <h3>All Applications</h3>
+        <ul>
+          {all.map(it => (
+            <li key={it.id} style={{display:'flex',gap:8,alignItems:'center',padding:'.25rem 0'}}>
+              <span style={{flex:1}}>{it.username} • {it.type} • {it.startDate} → {it.endDate} • {it.status}</span>
+              <button onClick={()=>setSelected(it)}>View</button>
+            </li>
+          ))}
+        </ul>
+        {selected && (
+          <div className="card" style={{marginTop:12, background:'#f9fbff'}}>
+            <h4>Application Details</h4>
+            <p><b>ID:</b> {selected.id}</p>
+            <p><b>User:</b> {selected.username}</p>
+            <p><b>Type:</b> {selected.type}</p>
+            <p><b>Dates:</b> {selected.startDate} → {selected.endDate}</p>
+            <p><b>Status:</b> {selected.status}</p>
+            {selected.reason && <p><b>Reason:</b> {selected.reason}</p>}
+            {selected.approverComment && <p><b>Manager Comment:</b> {selected.approverComment}</p>}
+            <button onClick={()=>setSelected(null)}>Close</button>
+          </div>
+        )}
       </div>
     </>
   )
