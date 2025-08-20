@@ -327,3 +327,10 @@ Notes:
 - The backend Dockerfiles expose ports 8081 and 8082, and the frontend exposes 80. Render handles routing; no manual port mapping is needed.
 - Spring Boot Actuator is already included; health checks at /actuator/health are available by default.
 - Vite environment variables are read at build time; ensure the frontend service has the correct VITE_* values when it builds on Render.
+
+
+## Email notifications (MVP)
+- No external email service is required for this project today.
+- The leave-service simulates emails by logging lines prefixed with [EMAIL_SIMULATION] when a request is approved or rejected.
+- You can see these logs in the Render service logs for leave-service after actions.
+- To enable real emails in the future, wire Spring’s JavaMailSender and add SMTP credentials (out of scope for the MVP you’re deploying now).
