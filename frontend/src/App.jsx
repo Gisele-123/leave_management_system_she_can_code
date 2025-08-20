@@ -175,25 +175,40 @@ function Register({setAuth}){
 
 function StaffDashboard({user, LEAVE_URL}){
   const [list, setList] = useState([])
-  const [apply, setApply] = useState({ username: user.username, type:'PTO', startDate:'', endDate:'', reason:'' })
+  const [apply, setApply] = useState({ username: (user.username||'').trim(), type:'PTO', startDate:'', endDate:'', reason:'' })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selected, setSelected] = useState(null) // selected application for view/edit
   const [edit, setEdit] = useState(null) // edit form state when editing
   const [err, setErr] = useState('')
+  const [balance, setBalance] = useState(null)
 
   const reload = async()=>{ const r = await axios.get(`${LEAVE_URL}/api/leaves/user/${user.username}`); setList(r.data) }
-  useEffect(()=>{ reload() },[])
+  useEffect(()=>{ (async()=>{ try{ const b = await axios.get(`${LEAVE_URL}/api/leaves/balance/${user.username}`); setBalance(b.data?.balance ?? b.data?.days ?? 20) }catch{ setBalance(20) } await reload() })() },[])
 
   const submit = async()=>{
-    setErr(''); setIsSubmitting(true)
+    setErr('')
+    // Basic client-side validation to match backend @FutureOrPresent and range checks
+    if (!apply.startDate || !apply.endDate) { setErr('Please select both start and end dates.'); return }
+    const start = new Date(apply.startDate)
+    const end = new Date(apply.endDate)
+    const today = new Date(); today.setHours(0,0,0,0)
+    if (start < today || end < today) { setErr('Dates cannot be in the past. Please choose today or a future date.'); return }
+    if (end < start) { setErr('End date cannot be before start date.'); return }
+    // Compute requested days (inclusive)
+    const days = Math.floor((end - start) / (24*60*60*1000)) + 1
+    if (balance != null && days > balance) { setErr(`You requested ${days} day(s) but your remaining balance is ${balance}.`); return }
+
+    setIsSubmitting(true)
     try{
       await axios.post(`${LEAVE_URL}/api/leaves/apply`, apply)
       await reload()
-      // auto-select the latest pending (approx: by created order if available; otherwise just clear selection)
       setSelected(null)
-      setApply({ username: user.username, type:'PTO', startDate:'', endDate:'', reason:'' })
-    }catch(e){ setErr('Failed to submit. Please check dates and balance.') }
-    finally{ setIsSubmitting(false) }
+      setApply({ username: (user.username||'').trim(), type:'PTO', startDate:'', endDate:'', reason:'' })
+      // Note: balance is deducted on approval; no need to refresh balance here.
+    }catch(e){
+      const serverMsg = e?.response?.data?.message || e?.response?.data?.error || e?.message
+      setErr(serverMsg ? `Failed to submit: ${serverMsg}` : 'Failed to submit. Please check dates and balance.')
+    } finally{ setIsSubmitting(false) }
   }
 
   const remove = async(id)=>{ await axios.delete(`${LEAVE_URL}/api/leaves/${id}`); await reload(); if(selected?.id===id){ setSelected(null); setEdit(null) } }
@@ -204,7 +219,6 @@ function StaffDashboard({user, LEAVE_URL}){
       await axios.put(`${LEAVE_URL}/api/leaves/${selected.id}`, null, { params: { startDate: edit.startDate, endDate: edit.endDate, reason: edit.reason } })
       await reload()
       setEdit(null)
-      // refresh selected from new list
       const updated = list.find(x=>x.id===selected.id)
       setSelected(updated || null)
     }catch(e){ setErr('Update failed. Only PENDING applications can be updated.') }
