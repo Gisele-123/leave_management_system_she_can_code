@@ -41,17 +41,22 @@ Examples:
 - Frontend: http://localhost:5173
 
 ## Hosted (Live) Setup
-If you already deployed the backend and frontend, set the frontend env variables to your hosted backend base URL.
+If you already deployed the backend and frontend, set the frontend env variables to your hosted backend base URL(s).
 
-Your deployments:
+Important: On Render (Blueprint), auth-service and leave-service are two separate Web Services, each with its own URL. Unless you place a reverse proxy in front, you should configure the frontend to use two different URLs.
+
+Your deployments (example):
 - Frontend (Vercel): https://leave-management-system-she-can-cod.vercel.app/
-- Backend (Render): https://leave-management-system-she-can-code-1.onrender.com
+- Auth (Render): https://<your-auth-service>.onrender.com
+- Leave (Render): https://<your-leave-service>.onrender.com
 
-For this repo, we updated frontend/.env to:
-- VITE_AUTH_URL=https://leave-management-system-she-can-code-1.onrender.com
-- VITE_LEAVE_URL=https://leave-management-system-she-can-code-1.onrender.com
+For this repo, frontend/.env.sample shows how to point to two URLs. Update your Vercel project variables accordingly:
+- VITE_AUTH_URL=https://<your-auth-service>.onrender.com
+- VITE_LEAVE_URL=https://<your-leave-service>.onrender.com
 
-On Vercel, set the same values in Project Settings > Environment Variables and redeploy the frontend so Vite rebuilds with these URLs.
+If you intentionally deploy a single combined backend URL, ensure it forwards both /api/auth and /api/leaves to their respective services (via an API gateway or reverse proxy). Otherwise only one set of endpoints will be reachable.
+
+On Vercel, set the values in Project Settings > Environment Variables and redeploy the frontend so Vite rebuilds with these URLs.
 
 ## Live Testing Guide (Deployed)
 Follow these steps to validate your live deployment end-to-end using your Vercel frontend and Render backend.
@@ -164,6 +169,17 @@ Troubleshooting (Live)
 - Backend 404/500 from the UI
   - Check backend health: https://leave-management-system-she-can-code-1.onrender.com/actuator/health
   - Open Swagger and try the same endpoint; compare paths the UI calls (see devtools Network tab) vs Swagger paths.
+- 403 Forbidden when applying/approving leaves from the frontend
+  - Most likely the frontend is sending /api/leaves/* to the auth-service URL. The auth-service will respond 403 for unknown protected paths.
+  - Fix: Deploy the leave-service on Render and set VITE_LEAVE_URL to that service’s URL in Vercel, then redeploy the frontend so the build picks it up.
+  - Verification: Open both Swagger UIs directly and ensure /api/leaves/apply works on the leave-service URL.
+- Only auth-service is live on Render, leave-service is not
+  - Likely cause: container port mismatch. Ensure leave-service Dockerfile EXPOSE matches its server.port (8082). We fixed Dockerfile to EXPOSE 8082.
+  - Redeploy your Render Blueprint (Sync Changes) to publish both services. Each service gets its own URL.
+  - Then set these in Vercel:
+    - VITE_AUTH_URL=https://<your-auth-service>.onrender.com
+    - VITE_LEAVE_URL=https://<your-leave-service>.onrender.com
+    - Redeploy Vercel to bake the values.
 - CORS issues
   - Render usually sends permissive CORS for simple endpoints in this MVP. If you see CORS blocked, try in Swagger first; if it works there but not from Vercel, share the failing request details (method, path, response headers) so we can tune CORS.
 - Dates validation

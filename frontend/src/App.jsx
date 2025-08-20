@@ -206,8 +206,13 @@ function StaffDashboard({user, LEAVE_URL}){
       setApply({ username: (user.username||'').trim(), type:'PTO', startDate:'', endDate:'', reason:'' })
       // Note: balance is deducted on approval; no need to refresh balance here.
     }catch(e){
+      const status = e?.response?.status
       const serverMsg = e?.response?.data?.message || e?.response?.data?.error || e?.message
-      setErr(serverMsg ? `Failed to submit: ${serverMsg}` : 'Failed to submit. Please check dates and balance.')
+      if (status === 403) {
+        setErr('Forbidden (403). This usually means the frontend is pointing leave requests to the Auth service or the leave-service is not deployed. Please set VITE_LEAVE_URL to your leave-service URL and redeploy the frontend.')
+      } else {
+        setErr(serverMsg ? `Failed to submit: ${serverMsg}` : 'Failed to submit. Please check dates and balance.')
+      }
     } finally{ setIsSubmitting(false) }
   }
 
