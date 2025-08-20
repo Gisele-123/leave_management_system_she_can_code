@@ -30,7 +30,7 @@ function Login({setAuth}){
   const [form, setForm] = useState({ username: '', password: '' })
   const [message, setMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const AUTH_URL = useMemo(()=>import.meta.env.VITE_AUTH_URL || 'http://localhost:8081',[])
+  const AUTH_URL = useMemo(()=>import.meta.env.VITE_AUTH_URL || import.meta.env.VITE_LEAVE_URL || 'http://localhost:8081',[])
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
   const nav = useNavigate()
 
@@ -101,7 +101,7 @@ function Login({setAuth}){
 
 function Register({setAuth}){
   const [form, setForm] = useState({ username: '', password: '', email: '', role: 'STAFF' })
-  const AUTH_URL = useMemo(()=>import.meta.env.VITE_AUTH_URL || 'http://localhost:8081',[])
+  const AUTH_URL = useMemo(()=>import.meta.env.VITE_AUTH_URL || import.meta.env.VITE_LEAVE_URL || 'http://localhost:8081',[])
   const nav = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState('')
@@ -262,8 +262,8 @@ function AdminDashboard({LEAVE_URL}){
 
 export default function App(){
   const [auth, setAuth] = useState({ token:'', user:null })
-  const AUTH_URL = useMemo(()=>import.meta.env.VITE_AUTH_URL || 'http://localhost:8081',[])
-  const LEAVE_URL = useMemo(()=>import.meta.env.VITE_LEAVE_URL || 'http://localhost:8082',[])
+  const AUTH_URL = useMemo(()=>import.meta.env.VITE_AUTH_URL || import.meta.env.VITE_LEAVE_URL || 'http://localhost:8081',[])
+  const LEAVE_URL = useMemo(()=>import.meta.env.VITE_LEAVE_URL || import.meta.env.VITE_AUTH_URL || 'http://localhost:8082',[])
   const logout = ()=> setAuth({token:'', user:null})
 
   return (

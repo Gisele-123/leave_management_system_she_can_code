@@ -1,4 +1,4 @@
-# SheCanCode Leave Management System (Monorepo)
+ployed my frontend here and it's working good# SheCanCode Leave Management System (Monorepo)
 
 Three independent services communicating via REST:
 - auth-service (Spring Boot): User registration, JWT login, Google OAuth login, 2FA stub, Swagger
@@ -39,6 +39,19 @@ Examples:
 - Auth service base: http://localhost:8081
 - Leave service base: http://localhost:8082
 - Frontend: http://localhost:5173
+
+## Hosted (Live) Setup
+If you already deployed the backend and frontend, set the frontend env variables to your hosted backend base URL.
+
+Your deployments:
+- Frontend (Vercel): https://leave-management-system-she-can-cod.vercel.app/
+- Backend (Render): https://leave-management-system-she-can-code-1.onrender.com
+
+For this repo, we updated frontend/.env to:
+- VITE_AUTH_URL=https://leave-management-system-she-can-code-1.onrender.com
+- VITE_LEAVE_URL=https://leave-management-system-she-can-code-1.onrender.com
+
+On Vercel, set the same values in Project Settings > Environment Variables and redeploy the frontend so Vite rebuilds with these URLs.
 
 ## Endpoints (MVP)
 Auth:
